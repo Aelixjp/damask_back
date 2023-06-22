@@ -31,7 +31,7 @@ app.get("/damask/api", async(req, res) => {
         }
         else
         {
-            await robobot.setup(); robobot.selectShop(pageID);
+            robobot.selectShop(pageID);
 
             switch(action)
             {
@@ -49,6 +49,7 @@ app.get("/damask/api", async(req, res) => {
                     } catch (e) {
                         resp.msg = "Ha ocurrido un error al obtener la información de la busqueda!";
                         resp.status = "failed";
+                        resp.error = e.message;
                     }
 
                     break;
@@ -64,6 +65,6 @@ app.get("/damask/api", async(req, res) => {
     res.json(resp);
 });
 
-app.listen(SERVER_PORT, () =>{
-    console.log(`Listening on port: ${SERVER_PORT}`);
+app.listen(SERVER_PORT, async() => {
+    console.log(`Listening on port: ${SERVER_PORT}`); robobot.setup();
 });

@@ -5,7 +5,7 @@
   "description": "Backend for damask application",
   "main": "index.js",
   "scripts": {
-    "start": "node server/index.js"
+    "start": "nodemon server/index.js"
   },
   "author": "Brayan Steven Garcia Millan",
   "license": "ISC",

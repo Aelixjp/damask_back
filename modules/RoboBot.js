@@ -63,8 +63,8 @@ export default class RoboBot
 
         await this.page.waitForSelector("#cb1-edit");
         await this.page.click("#cb1-edit");
-        await this.page.type("#cb1-edit", `${search}`, { delay: 2 });
-        await this.page.click("body > header > div > form > button");
+        await this.page.type("#cb1-edit", `${search}`);
+        await this.page.click("body > header > div > div.nav-area.nav-top-area.nav-center-area > form > button");
 
         if(Object.entries(args).length > 0)
         {
@@ -79,11 +79,11 @@ export default class RoboBot
 
                 await this.page.click(inputMinPrice);
                 await this.page.focus(inputMinPrice);
-                await this.page.keyboard.type(`${minPrice}`, { delay: 2 });
+                await this.page.keyboard.type(`${minPrice}`, { delay: 1 });
 
                 await this.page.click(inputMaxPrice);
                 await this.page.focus(inputMaxPrice);
-                await this.page.keyboard.type(`${maxPrice}`, { delay: 2 });
+                await this.page.keyboard.type(`${maxPrice}`, { delay: 1 });
 
                 await this.page.evaluate(e => { const inp = document.querySelector(e); inp.click(); }, inputSubmit);
             }
@@ -97,7 +97,7 @@ export default class RoboBot
 
             for(const card of cards)
             {
-                const cardLink = card.children[0].children[0];
+                const cardLink = card.querySelector("a");
                 const contWrappr = card.children[1].children;
                 const titleField = 
                     [...contWrappr].filter(e => e.classList.contains("ui-search-item__group--title"));
@@ -114,10 +114,12 @@ export default class RoboBot
                 }
 
                 const url = cardLink.href;
-                const imgURL = cardLink.children[0].children[0].children[0].children[0].children[0].children[0].src;
                 const cardTitle = titleField[0].children[1].children[0].textContent;
                 const price = parseFloat(prices.textContent.split(" ")[0]);
 
+                const img = card.querySelector("img");
+                const imgURL = img.hasAttribute("data-src") ? img.getAttribute("data-src") : img.src;
+                
                 r.push({id: i, url, imgURL, title: cardTitle, price}); i++;
             }
 
