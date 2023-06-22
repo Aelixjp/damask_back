@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "name": "damask_back",
+  "version": "1.0.0",
+  "description": "Backend for damask application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "author": "Brayan Steven Garcia Millan",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.1",
+    "puppeteer": "^14.1.1"
+  }
+}
