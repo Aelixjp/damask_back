@@ -16,24 +16,24 @@ export default class RoboBot
         this.page = await this.browser.pages().then(p => p[0]);
     }
 
-    selectShop(pageID)
+    selectShop = pageID =>
     {
         this.currPageID = pageID;
-    }
 
-    navigate(pageID)
-    {
         this.pageID   = RoboBot.allowedShops[pageID - 1]["id"];
         this.pageType = RoboBot.allowedShops[pageID - 1]["name"];
         this.pageURL  = RoboBot.allowedShops[pageID - 1]["url"];
-        
-        return this.page.goto(this.pageURL);
     }
 
-    async searchProduct(search, args)
+    async navigate(pageID, customPage)
     {
-        await this.navigate(this.currPageID);
+        this.selectShop(pageID);
 
+        return this.page.goto(customPage ? customPage : this.pageURL);
+    }
+
+    searchProduct = async(search, args) =>
+    {   
         switch(this.pageType)
         {
             case "Amazon":
@@ -51,8 +51,10 @@ export default class RoboBot
         }
     }
 
-    async searchProductForMercadolibre(search, args)
+    searchProductForMercadolibre = async(search, args) =>
     {
+        await this.navigate(this.currPageID, encodeURI(`https://listado.mercadolibre.com.co/${search}#D[A:${search}]`));
+        
         let res = [];
         let srchSize = 25;
 
@@ -61,10 +63,10 @@ export default class RoboBot
         const inputSubmit   = "button[data-testid='submit-price']";
         const entrySelector = ".andes-card";
 
-        await this.page.waitForSelector("#cb1-edit");
-        await this.page.click("#cb1-edit");
-        await this.page.type("#cb1-edit", `${search}`);
-        await this.page.click("body > header > div > div.nav-area.nav-top-area.nav-center-area > form > button");
+        // await this.page.waitForSelector("#cb1-edit");
+        // await this.page.click("#cb1-edit");
+        // await this.page.type("#cb1-edit", `${search}`);
+        // await this.page.click("body > header > div > div.nav-area.nav-top-area.nav-center-area > form > button");
 
         if(Object.entries(args).length > 0)
         {
@@ -91,7 +93,7 @@ export default class RoboBot
 
         await this.page.waitForSelector(entrySelector);
 
-        res = await this.page.evaluate((e, s) =>{
+        res = await this.page.evaluate(async(e, s) =>{
             let r = [];
             const cards = [...document.querySelectorAll(e)].slice(0, s); let i = 0;
 
@@ -106,14 +108,12 @@ export default class RoboBot
                 let prices = contCols[0].children[0].children[0].children[0].children[0];
 
                 if(!prices.children[0].classList.contains("ui-search-price__original-value"))
-                {
                     prices = prices.children[0].children[0].children[0];
-                }else
-                {
+                else
                     prices = prices.children[1].children[0].children[0];
-                }
 
-                const url = cardLink.href;
+                let url = cardLink.href;
+                
                 const cardTitle = titleField[0].children[1].children[0].textContent;
                 const price = parseFloat(prices.textContent.split(" ")[0]);
 
@@ -126,6 +126,30 @@ export default class RoboBot
             return r;
 
         }, entrySelector, srchSize);
+
+        res = res.map(async(dt) => {
+            if(dt.url.startsWith("https://click1.mercadolibre.com.co/"))
+            {
+                const externalPage = await this.browser.newPage();
+                await externalPage.goto(dt.url);
+
+                dt.url = externalPage.url();
+                
+                externalPage.close();
+            }
+
+            if(dt.url.startsWith(this.pageURL))
+                dt.url = dt.url.split("?")[0];
+
+            if(dt.url.startsWith("https://articulo.mercadolibre.com.co/"))
+            {
+                dt.url = dt.url.split("#")[0];
+            }
+
+            return dt;
+        });
+
+        res = Promise.all(res);
 
         return res;
     }
