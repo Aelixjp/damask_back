@@ -119,7 +119,7 @@ export default class RoboBot
 
                 const img = card.querySelector("img");
                 const imgURL = img.hasAttribute("data-src") ? img.getAttribute("data-src") : img.src;
-                
+
                 r.push({id: i, url, imgURL, title: cardTitle, price}); i++;
             }
 
@@ -145,6 +145,8 @@ export default class RoboBot
             {
                 dt.url = dt.url.split("#")[0];
             }
+
+            dt.pageID = this.currPageID | 0;
 
             return dt;
         });
