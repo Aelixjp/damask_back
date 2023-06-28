@@ -65,6 +65,6 @@ app.get("/damask/api", async(req, res) => {
     res.json(resp);
 });
 
-app.listen(SERVER_PORT, async() => {
+app.listen(SERVER_PORT, "0.0.0.0", async() => {
     console.log(`Listening on port: ${SERVER_PORT}`); robobot.setup();
 });
