@@ -56,7 +56,7 @@ export default class RoboBot
         await this.navigate(this.currPageID, encodeURI(`https://listado.mercadolibre.com.co/${search}#D[A:${search}]`));
         
         let res = [];
-        let srchSize = 25;
+        let srchSize = args.searchSize || 25;
 
         const inputMinPrice = "input[data-testid='Minimum-price']";
         const inputMaxPrice = "input[data-testid='Maximum-price']";
@@ -68,11 +68,9 @@ export default class RoboBot
         // await this.page.type("#cb1-edit", `${search}`);
         // await this.page.click("body > header > div > div.nav-area.nav-top-area.nav-center-area > form > button");
 
-        if(Object.entries(args).length > 0)
+        if(args.minPrice != 0 || args.maxPrice != 0)
         {
-            const { minPrice, maxPrice, searchSize } = args;
-
-            srchSize = searchSize || srchSize;
+            const { minPrice, maxPrice } = args;
 
             if(minPrice && maxPrice)
             {
@@ -81,17 +79,15 @@ export default class RoboBot
 
                 await this.page.click(inputMinPrice);
                 await this.page.focus(inputMinPrice);
-                await this.page.keyboard.type(`${minPrice}`, { delay: 1 });
+                await this.page.keyboard.type(`${minPrice}`, { delay: 3 });
 
                 await this.page.click(inputMaxPrice);
                 await this.page.focus(inputMaxPrice);
-                await this.page.keyboard.type(`${maxPrice}`, { delay: 1 });
+                await this.page.keyboard.type(`${maxPrice}`, { delay: 3 });
 
                 await this.page.evaluate(e => { const inp = document.querySelector(e); inp.click(); }, inputSubmit);
             }
         }
-
-        await this.page.waitForSelector(entrySelector);
 
         res = await this.page.evaluate(async(e, s) =>{
             let r = [];
