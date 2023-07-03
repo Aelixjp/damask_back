@@ -1,19 +1,42 @@
 import puppeteer from "puppeteer";
+import { allowedShops } from "./RoboBot.config.js";
 
 export default class RoboBot
 {
+    #defaultPaginationSize = 25;
 
     constructor(browserConfigs)
     {
         this.pageURL;
         this.currPageID = 1;
         this.browserConfigs = browserConfigs;
+
+        return this.setup();
     }
 
     async setup()
     {
         this.browser = await puppeteer.launch(this.browserConfigs);
         this.page = await this.browser.pages().then(p => p[0]);
+
+        return this;
+    }
+
+    set defaultPaginationSize(defaultPaginationSize)
+    {
+        this.#defaultPaginationSize = defaultPaginationSize;
+    }
+
+    get defaultPaginationSize()
+    {
+        return this.#defaultPaginationSize;
+    }
+
+    navigate(pageID, customPage)
+    {
+        this.selectShop(pageID);
+
+        return this.page.goto(customPage ? customPage : this.pageURL);
     }
 
     selectShop = pageID =>
@@ -23,13 +46,6 @@ export default class RoboBot
         this.pageID   = RoboBot.allowedShops[pageID - 1]["id"];
         this.pageType = RoboBot.allowedShops[pageID - 1]["name"];
         this.pageURL  = RoboBot.allowedShops[pageID - 1]["url"];
-    }
-
-    async navigate(pageID, customPage)
-    {
-        this.selectShop(pageID);
-
-        return this.page.goto(customPage ? customPage : this.pageURL);
     }
 
     searchProduct = async(search, args) =>
@@ -51,22 +67,19 @@ export default class RoboBot
         }
     }
 
-    searchProductForMercadolibre = async(search, args) =>
+    searchProductForAmazon = async(search, args) => 
     {
-        await this.navigate(this.currPageID, encodeURI(`https://listado.mercadolibre.com.co/${search}#D[A:${search}]`));
-        
         let res = [];
-        let srchSize = args.searchSize || 25;
+        const srchSize = args.searchSize || this.#defaultPaginationSize;
+        
+        this.selectShop(1);
 
-        const inputMinPrice = "input[data-testid='Minimum-price']";
-        const inputMaxPrice = "input[data-testid='Maximum-price']";
-        const inputSubmit   = "button[data-testid='submit-price']";
-        const entrySelector = ".andes-card";
-
-        // await this.page.waitForSelector("#cb1-edit");
-        // await this.page.click("#cb1-edit");
-        // await this.page.type("#cb1-edit", `${search}`);
-        // await this.page.click("body > header > div > div.nav-area.nav-top-area.nav-center-area > form > button");
+        await this.navigate(this.currPageID, encodeURI(`${this.pageURL}/s?k=${search}`));
+        
+        const inputMinPrice = "#low-price";
+        const inputMaxPrice = "#high-price";
+        const inputSubmit   = "#a-autoid-1";
+        const inpLinks = ".s-card-container .sg-row:nth-child(1):not(.puis-expand-height)";
 
         if(args.minPrice != 0 || args.maxPrice != 0)
         {
@@ -86,6 +99,77 @@ export default class RoboBot
                 await this.page.keyboard.type(`${maxPrice}`, { delay: 3 });
 
                 await this.page.evaluate(e => { const inp = document.querySelector(e); inp.click(); }, inputSubmit);
+            }
+        }
+        
+        res = await this.page.evaluate(async(e, s, pageID) => {
+            const inpImages = "img";
+            const inpPrices = ".a-offscreen";
+            const inpPricesDf = ".a-price-whole";
+
+            const linksHtml  = [...document.querySelectorAll(e)].slice(0, s);
+
+            const imagesHtml = linksHtml.map(l => l.querySelector(inpImages)); 
+            const pricesHtml = linksHtml.map(p => p.querySelector(inpPrices) || p.querySelector(inpPricesDf) || "");
+
+            const images = imagesHtml.map(image => image.src);
+            const links = linksHtml.map(link => link.querySelector("a.a-link-normal").href);
+            const titles = linksHtml.map(link => link.querySelector("span.a-size-medium").innerText);
+            const prices = pricesHtml.map(price => price.innerText ? parseFloat(price.innerText.slice(3).replaceAll(",", "")) : 0);
+
+            const r = images.map((image, i) => {
+                const data = 
+                {
+                    id: i,
+                    url: links[i],
+                    imgURL: image,
+                    title: titles[i],
+                    price: prices[i],
+                    pageID
+                };
+
+                return data;
+            });
+
+            return r;
+        }, inpLinks, srchSize, this.currPageID);
+
+        return res;
+    }
+
+    searchProductForMercadolibre = async(search, args) =>
+    {
+        let res = [];
+        const srchSize = args.searchSize || this.#defaultPaginationSize;
+        
+        this.selectShop(3);
+
+        await this.navigate(this.currPageID, encodeURI(`https://listado.mercadolibre.com.co/${search}#D[A:${search}]`));
+
+        const inputMinPrice = "input[data-testid='Minimum-price']";
+        const inputMaxPrice = "input[data-testid='Maximum-price']";
+        const inputSubmit   = "button[data-testid='submit-price']";
+        const entrySelector = ".andes-card";
+
+        if(args.minPrice != 0 || args.maxPrice != 0)
+        {
+            const { minPrice, maxPrice } = args;
+
+            if(minPrice && maxPrice)
+            {
+                await this.page.waitForSelector(inputMinPrice);
+                await this.page.waitForSelector(inputMaxPrice);
+
+                await this.page.click(inputMinPrice);
+                await this.page.focus(inputMinPrice);
+                await this.page.keyboard.type(`${minPrice}`, { delay: 3 });
+
+                await this.page.click(inputMaxPrice);
+                await this.page.focus(inputMaxPrice);
+                await this.page.keyboard.type(`${maxPrice}`, { delay: 3 });
+
+                await this.page.evaluate(e => { const inp = document.querySelector(e); inp.click(); }, inputSubmit);
+                await this.page.waitForNavigation();
             }
         }
 
@@ -154,20 +238,4 @@ export default class RoboBot
 
 }
 
-RoboBot.allowedShops = [
-    {
-        id: 1,
-        url: "https://www.amazon.com",
-        name: "Amazon"
-    },
-    {
-        id: 2,
-        url: "https://best.aliexpress.com/",
-        name: "Aliexpress"
-    },
-    {
-        id: 3,
-        url: "https://www.mercadolibre.com.co/",
-        name: "Mercadolibre"
-    }
-];
+RoboBot.allowedShops = allowedShops;
