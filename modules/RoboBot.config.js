@@ -3,7 +3,7 @@ import { Dimension } from "../scripts/utils/utils.js";
 const windowSize = new Dimension(1920, 1080);
 
 export const browserConfigs = {
-    headless: false, 
+    headless: true, 
     defaultViewport: null,
     args: [
         '--no-sandbox',

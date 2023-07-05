@@ -5,6 +5,7 @@ export const SERVER_CONFIGS =
     [
         "http://localhost",
         "http://192.168.0.11",
+        "http://192.168.1.158",
         "http://192.168.137.1"
     ]
 };
