@@ -58,7 +58,7 @@ export default class RequestHandler
                 break;
 
             case "aliexpress":
-                resp.msg = "No soportado por ahora!";
+                resp = await RequestHandler.searchProductByAliexpressHandler(req, res);
                 break;
 
             case "mercadolibre":
@@ -113,6 +113,11 @@ export default class RequestHandler
     }
 
     static searchProductByAmazonHandler(req, res)
+    {
+        return RequestHandler.genericSearch(req, res);
+    }
+
+    static searchProductByAliexpressHandler(req, res)
     {
         return RequestHandler.genericSearch(req, res);
     }

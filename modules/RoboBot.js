@@ -113,7 +113,7 @@ export default class RoboBot
             const pricesHtml = linksHtml.map(p => p.querySelector(inpPrices) || p.querySelector(inpPricesDf) || "");
 
             const images = imagesHtml.map(image => image.src);
-            const links = linksHtml.map(link => link.querySelector("a.a-link-normal").href);
+            const links  = linksHtml.map(link => link.querySelector("a.a-link-normal").href);
             const titles = linksHtml.map(link => link.querySelector("span.a-size-medium").innerText);
             const prices = pricesHtml.map(price => price.innerText ? parseFloat(price.innerText.slice(3).replaceAll(",", "")) : 0);
 
@@ -133,6 +133,29 @@ export default class RoboBot
 
             return r;
         }, inpLinks, srchSize, this.currPageID);
+
+        return res;
+    }
+
+    searchProductForAliexpress = async(search, args) => 
+    {
+        let res = [];
+        const srchSize = args.searchSize || this.#defaultPaginationSize;
+        
+        this.selectShop(2);
+        
+        await this.page.goto(`${this.pageURL}`, {timeout: 0});
+        
+        const inpSearch = "#search-key";
+        const btnSearch = "div.searchbar-operate-box input.search-button";
+
+        await this.page.waitForSelector(inpSearch);
+        await this.page.click(inpSearch);
+        await this.page.focus(inpSearch);
+        await this.page.keyboard.type(search, { delay: 3 });
+        await this.page.waitForSelector(btnSearch);
+        await this.page.click(btnSearch);
+        await this.page.waitForNavigation();
 
         return res;
     }
