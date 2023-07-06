@@ -1,4 +1,5 @@
 import puppeteer from "puppeteer";
+import { sleep, autoScroll } from "../scripts/utils/utils.js";
 import { allowedShops } from "./RoboBot.config.js";
 
 export default class RoboBot
@@ -144,8 +145,10 @@ export default class RoboBot
         
         this.selectShop(2);
         
-        await this.page.goto(`${this.pageURL}`, {timeout: 0});
+        this.page.goto(`${this.pageURL}`, {timeout: 0});
         
+        await sleep(1500);
+
         const inpSearch = "#search-key";
         const btnSearch = "div.searchbar-operate-box input.search-button";
 
@@ -156,6 +159,56 @@ export default class RoboBot
         await this.page.waitForSelector(btnSearch);
         await this.page.click(btnSearch);
         await this.page.waitForNavigation();
+        await autoScroll(this.page, 25);
+
+        res = await this.page.evaluate(async(s, pageID) => {
+            //Informacion
+            const productImg = ".product-img";
+            const productLink = "a.search-card-item";
+            const productTitle = ".search-card-item h1";
+            const notConvPrices = ".search-card-item > div:nth-child(2) > div > div:nth-child(1)";
+
+            const imagesHtml = [...document.querySelectorAll(productImg)].slice(0, s);
+            const linksHtml  = [...document.querySelectorAll(productLink)].slice(0, s);
+            const titlesHtml = [...document.querySelectorAll(productTitle)].slice(0, s);
+            const htmlPricesNotConv = Array.from(document.querySelectorAll(notConvPrices));
+
+            let htmlPricesCont = htmlPricesNotConv.filter(m => {
+                return Array.from(m.classList).find(d => d.includes("manhattan--price-sale"));
+            });
+
+            htmlPricesCont = htmlPricesCont.slice(0, s);
+
+            const images = imagesHtml.map(image => image.src);
+            const links  = linksHtml.map(link => link.href);
+            const titles = titlesHtml.map(title => title.textContent);
+            const prices = htmlPricesCont.map(c => {
+                let lastDigits;
+                
+                if(!c.children[7])
+                    lastDigits = `.${c.children[5].textContent}`;
+                else
+                    lastDigits = `${c.children[5].textContent}.${c.children[7].textContent}`;
+
+                return Math.round(`${c.children[1].textContent}${c.children[3].textContent}${lastDigits}`);
+            });
+
+            const r = images.map((image, i) => {
+                const data = 
+                {
+                    id: i,
+                    url: links[i],
+                    imgURL: image,
+                    title: titles[i],
+                    price: prices[i],
+                    pageID
+                };
+
+                return data;
+            });
+
+            return r;
+        }, srchSize, this.currPageID);
 
         return res;
     }

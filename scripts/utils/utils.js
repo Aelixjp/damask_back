@@ -1,3 +1,27 @@
+export const sleep = timeToSleep => 
+{
+    return new Promise(resolve => setTimeout(resolve, timeToSleep));
+}
+
+export const autoScroll = async(page, interval = 100) => {
+    await page.evaluate(async (interval) => {
+        await new Promise((resolve) => {
+            let totalHeight = 0;
+            let distance = 400;
+            let timer = setInterval(() => {
+                let scrollHeight = document.body.scrollHeight;
+                window.scrollBy(0, distance);
+                totalHeight += distance;
+
+                if(totalHeight >= scrollHeight - window.innerHeight){
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, interval);
+        });
+    }, interval);
+}
+
 /**Describe la dimension de un objeto*/
 export class Dimension
 {
