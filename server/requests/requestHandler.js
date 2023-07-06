@@ -82,6 +82,7 @@ export default class RequestHandler
             resp.msg = "No se han proporcionado parametros!";
         else
         {
+            const pagNavigation = data.pagNavigation || 1;
             const { name, minPrice, maxPrice, searchSize, pageID, instanceID } = data;
 
             if(
@@ -97,7 +98,7 @@ export default class RequestHandler
                 robobotInstance.selectShop(pageID);
 
                 try {
-                    const searchRes = await robobotInstance.searchProduct(name, {minPrice, maxPrice, searchSize: srchSize});
+                    const searchRes = await robobotInstance.searchProduct(name, {minPrice, maxPrice, searchSize: srchSize, pagNavigation });
 
                     resp.msg = "Exito!";
                     resp.status = true;

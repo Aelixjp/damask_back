@@ -11,6 +11,7 @@ export default class RoboBot
         this.pageURL;
         this.currPageID = 1;
         this.browserConfigs = browserConfigs;
+        this.pageToNavigate = 1;
 
         return this.setup();
     }
@@ -71,16 +72,25 @@ export default class RoboBot
     searchProductForAmazon = async(search, args) => 
     {
         let res = [];
+        const pagNavigation = args.pagNavigation;
         const srchSize = args.searchSize || this.#defaultPaginationSize;
         
         this.selectShop(1);
 
-        await this.navigate(this.currPageID, encodeURI(`${this.pageURL}/s?k=${search}`));
+        if(pagNavigation <= 1)
+        {
+            await this.navigate(this.currPageID, encodeURI(`${this.pageURL}/s?k=${search}`));
+        }
+        else
+        {
+            await this.page.goto(encodeURI(`${this.pageURL}/s?k=${search}&page=${pagNavigation}`));
+        }
         
         const inputMinPrice = "#low-price";
         const inputMaxPrice = "#high-price";
         const inputSubmit   = "#a-autoid-1";
         const inpLinks = ".s-card-container .sg-row:nth-child(1):not(.puis-expand-height)";
+
 
         if(args.minPrice != 0 || args.maxPrice != 0)
         {
@@ -146,8 +156,6 @@ export default class RoboBot
         this.selectShop(2);
         
         this.page.goto(`${this.pageURL}`, {timeout: 0});
-        
-        await sleep(1500);
 
         const inpSearch = "#search-key";
         const btnSearch = "div.searchbar-operate-box input.search-button";
@@ -158,7 +166,7 @@ export default class RoboBot
         await this.page.keyboard.type(search, { delay: 3 });
         await this.page.waitForSelector(btnSearch);
         await this.page.click(btnSearch);
-        await this.page.waitForNavigation();
+        await sleep(3000);
         await autoScroll(this.page, 25);
 
         res = await this.page.evaluate(async(s, pageID) => {
@@ -216,11 +224,19 @@ export default class RoboBot
     searchProductForMercadolibre = async(search, args) =>
     {
         let res = [];
+        const pagNavigation = args.pagNavigation;
         const srchSize = args.searchSize || this.#defaultPaginationSize;
-        
+
         this.selectShop(3);
 
         await this.navigate(this.currPageID, encodeURI(`https://listado.mercadolibre.com.co/${search}#D[A:${search}]`));
+        
+        if(pagNavigation > 1)
+        {
+            await this.page.waitForSelector(".andes-pagination__button--next");
+            await this.page.click(".andes-pagination__button--next");
+            await this.page.evaluate(()=>{});
+        }
 
         const inputMinPrice = "input[data-testid='Minimum-price']";
         const inputMaxPrice = "input[data-testid='Maximum-price']";
@@ -283,6 +299,8 @@ export default class RoboBot
 
         }, entrySelector, srchSize);
 
+        let browserPages = [];
+
         res = res.map(async(dt) => {
             if(dt.url.startsWith("https://click1.mercadolibre.com.co/"))
             {
@@ -290,8 +308,8 @@ export default class RoboBot
                 await externalPage.goto(dt.url);
 
                 dt.url = externalPage.url();
-                
-                externalPage.close();
+
+                browserPages.push(externalPage);
             }
 
             if(dt.url.startsWith(this.pageURL))
@@ -307,7 +325,9 @@ export default class RoboBot
             return dt;
         });
 
-        res = Promise.all(res);
+        res = await Promise.all(res);
+
+        browserPages.forEach(externalPage => externalPage.close());
 
         return res;
     }
